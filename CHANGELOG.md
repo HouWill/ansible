@@ -30,6 +30,7 @@ Ansible Changes By Release
 * added optional 'piped' transfer method to ssh plugin for when scp and sftp are missing
 * default controlpersist path is now a custom hash of host-port-user to avoid the socket path length errors for long hostnames
 * Various fixes for Python3 compatibility
+* The AWS Lambda module previously ignored changes that only affected one parameter. Existing deployments may have outstanding changes that this bugfix will apply.
 
 ###Deprecations:
 * Specifying --tags (or --skip-tags) multiple times on the command line
@@ -43,6 +44,13 @@ Ansible Changes By Release
   options will be merged with no way to go back to the old behaviour.
 * Modules
   * ec2_vpc will be deprecated in 2.3 and removed in 2.5
+  * cl_bond will be deprecated in 2.3 and removed in 2.5
+  * cl_bridge will be deprecated in 2.3 and removed in 2.5
+  * cl_img_install will be deprecated in 2.3 and removed in 2.5
+  * cl_interface will be deprecated in 2.3 and removed in 2.5
+  * cl_interface_policy will be deprecated in 2.3 and removed in 2.5
+  * cl_license will be deprecated in 2.3 and removed in 2.5
+  * cl_ports will be deprecated in 2.3 and removed in 2.5
 
 ###Modules Notes:
 - oVirt/RHV
@@ -56,7 +64,7 @@ Ansible Changes By Release
 
 ###New Modules:
 - a10_server_axapi3
-- amazon
+- amazon:
   * aws_kms
   * cloudfront_facts
   * ec2_group_facts
@@ -74,10 +82,10 @@ Ansible Changes By Release
 - bigswitch:
   * bigmon_chain
   * bigmon_policy
-- cloudengine
+- cloudengine:
   * ce_command
 - cloudscale_server
-- cloudstack
+- cloudstack:
   * cs_host
   * cs_nic
   * cs_region
@@ -88,7 +96,7 @@ Ansible Changes By Release
   * eos_banner
   * eos_system
   * eos_user
-- f5
+- f5:
   * bigip_gtm_facts
   * bigip_hostname
   * bigip_snat_pool
@@ -99,11 +107,15 @@ Ansible Changes By Release
 - fortios
   * fortios_config
 - gconftool2
-- google
+- google:
   * gce_eip
   * gce_snapshot
   * gcpubsub
   * gcpubsub_facts
+- hpilo:
+  * hpilo_boot
+  * hpilo_facts
+  * hponcfg
 - icinga2_feature
 - illumos:
   * dladm_iptun
@@ -119,7 +131,7 @@ Ansible Changes By Release
   * infini_host
   * infini_pool
   * infini_vol
-- ipa
+- ipa:
   * ipa_group
   * ipa_hbacrule
   * ipa_host
@@ -134,6 +146,7 @@ Ansible Changes By Release
   * ios_system
   * ios_vrf
 - iosxr_system
+- iso_extract
 - jenkins_script
 - ldap:
   * ldap_attr
@@ -141,7 +154,7 @@ Ansible Changes By Release
 - logstash_plugin
 - mattermost
 - net_command
-- netapp
+- netapp:
   * sf_account_manager
   * sf_snapshot_schedule_manager
   * sf_volume_manager
@@ -152,11 +165,11 @@ Ansible Changes By Release
 - openssl:
   * openssl_privatekey
   * openssl_publickey
-- openstack
+- openstack:
   * os_nova_host_aggregate
   * os_quota
 - openwrt_init
-- ordnance
+- ordnance:
   * ordnance_config
   * ordnance_facts
 - ovirt:
@@ -203,6 +216,7 @@ Ansible Changes By Release
   * packet_sshkey
 - pamd
 - panos:
+  * panos_address
   * panos_admin
   * panos_admpwd
   * panos_cert_gen_ssh
@@ -210,11 +224,14 @@ Ansible Changes By Release
   * panos_commit
   * panos_dag
   * panos_import
+  * panos_interface
+  * panos_lic
   * panos_loadcfg
   * panos_mgtconfig
   * panos_nat_policy
   * panos_pg
   * panos_restart
+  * panos_security_policy
   * panos_service
 - postgresql_schema
 - proxmox_kvm
@@ -223,6 +240,8 @@ Ansible Changes By Release
 - runit
 - serverless
 - set_stats
+- panos:
+  * panos_security_policy
 - smartos:
   * imgadm
   * vmadm
@@ -230,7 +249,7 @@ Ansible Changes By Release
 - stacki_host
 - swupd
 - tempfile
-- tower
+- tower:
   * tower_credential
   * tower_group
   * tower_host
@@ -245,10 +264,18 @@ Ansible Changes By Release
 - vmware:
   * vmware_guest_facts
   * vmware_guest_snapshot
-- web_infrastructure
+- web_infrastructure:
   * jenkins_script
+- system
+  * parted
 - windows:
+  * win_disk_image
+  * win_dns_client
+  * win_domain
+  * win_domain_controller
+  * win_domain_membership
   * win_find
+  * win_msg
   * win_path
   * win_psexec
   * win_reg_stat
