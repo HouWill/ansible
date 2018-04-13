@@ -23,11 +23,13 @@ import sys
 import copy
 from distutils.version import LooseVersion
 
-from ansible.module_utils.basic import AnsibleModule, BOOLEANS_TRUE, BOOLEANS_FALSE
+from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.six.moves.urllib.parse import urlparse
+from ansible.module_utils.parsing.convert_bool import BOOLEANS_TRUE, BOOLEANS_FALSE
 
 HAS_DOCKER_PY = True
 HAS_DOCKER_PY_2 = False
+HAS_DOCKER_PY_3 = False
 HAS_DOCKER_ERROR = None
 
 try:
@@ -37,7 +39,12 @@ try:
     from docker.tls import TLSConfig
     from docker.constants import DEFAULT_TIMEOUT_SECONDS, DEFAULT_DOCKER_API_VERSION
     from docker import auth
-    if LooseVersion(docker_version) >= LooseVersion('2.0.0'):
+
+    if LooseVersion(docker_version) >= LooseVersion('3.0.0'):
+        HAS_DOCKER_PY_3 = True
+        from docker import APIClient as Client
+        from docker.types import Ulimit, LogConfig
+    elif LooseVersion(docker_version) >= LooseVersion('2.0.0'):
         HAS_DOCKER_PY_2 = True
         from docker import APIClient as Client
         from docker.types import Ulimit, LogConfig
@@ -78,7 +85,7 @@ DOCKER_REQUIRED_TOGETHER = [
 ]
 
 DEFAULT_DOCKER_REGISTRY = 'https://index.docker.io/v1/'
-EMAIL_REGEX = '[^@]+@[^@]+\.[^@]+'
+EMAIL_REGEX = r'[^@]+@[^@]+\.[^@]+'
 BYTE_SUFFIXES = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
 
 
@@ -88,6 +95,9 @@ if not HAS_DOCKER_PY:
     class Client(object):
         def __init__(self, **kwargs):
             pass
+
+    class APIError(Exception):
+        pass
 
 
 class DockerBaseClass(object):
@@ -217,7 +227,7 @@ class AnsibleDockerClient(Client):
             docker_host=self._get_value('docker_host', params['docker_host'], 'DOCKER_HOST',
                                         DEFAULT_DOCKER_HOST),
             tls_hostname=self._get_value('tls_hostname', params['tls_hostname'],
-                                        'DOCKER_TLS_HOSTNAME', 'localhost'),
+                                         'DOCKER_TLS_HOSTNAME', 'localhost'),
             api_version=self._get_value('api_version', params['api_version'], 'DOCKER_API_VERSION',
                                         'auto'),
             cacert_path=self._get_value('cacert_path', params['cacert_path'], 'DOCKER_CERT_PATH', None),
@@ -244,7 +254,7 @@ class AnsibleDockerClient(Client):
     def _get_tls_config(self, **kwargs):
         self.log("get_tls_config:")
         for key in kwargs:
-            self.log("  %s: %s" %  (key, kwargs[key]))
+            self.log("  %s: %s" % (key, kwargs[key]))
         try:
             tls_config = TLSConfig(**kwargs)
             return tls_config
@@ -327,11 +337,10 @@ class AnsibleDockerClient(Client):
     def _handle_ssl_error(self, error):
         match = re.match(r"hostname.*doesn\'t match (\'.*\')", str(error))
         if match:
-            msg = "You asked for verification that Docker host name matches %s. The actual hostname is %s. " \
-                "Most likely you need to set DOCKER_TLS_HOSTNAME or pass tls_hostname with a value of %s. " \
-                "You may also use TLS without verification by setting the tls parameter to true." \
-                %  (self.auth_params['tls_hostname'], match.group(1))
-            self.fail(msg)
+            self.fail("You asked for verification that Docker host name matches %s. The actual hostname is %s. "
+                      "Most likely you need to set DOCKER_TLS_HOSTNAME or pass tls_hostname with a value of %s. "
+                      "You may also use TLS without verification by setting the tls parameter to true."
+                      % (self.auth_params['tls_hostname'], match.group(1), match.group(1)))
         self.fail("SSL Exception: %s" % (error))
 
     def get_container(self, name=None):
@@ -430,13 +439,10 @@ class AnsibleDockerClient(Client):
         Pull an image
         '''
         self.log("Pulling image %s:%s" % (name, tag))
-        alreadyToLatest = False
+        old_tag = self.find_image(name, tag)
         try:
             for line in self.pull(name, tag=tag, stream=True, decode=True):
                 self.log(line, pretty_print=True)
-                if line.get('status'):
-                    if line.get('status').startswith('Status: Image is up to date for'):
-                        alreadyToLatest = True
                 if line.get('error'):
                     if line.get('errorDetail'):
                         error_detail = line.get('errorDetail')
@@ -448,6 +454,6 @@ class AnsibleDockerClient(Client):
         except Exception as exc:
             self.fail("Error pulling image %s:%s - %s" % (name, tag, str(exc)))
 
-        return self.find_image(name, tag), alreadyToLatest
+        new_tag = self.find_image(name, tag)
 
-
+        return new_tag, old_tag == new_tag
